@@ -1,0 +1,174 @@
+<html>
+   <head>
+      <title>Polygon Hill Climbing</title>
+   </head>
+   <script src = './js/helperFunctions.js'></script>
+   <script src = './js/gene.js'></script>
+   <script src = './js/member.js'></script>
+   <script src = './js/gene_population.js'></script>
+   <script src = './js/climber.js'></script>
+   <script src = './js/jsons.js'></script>
+   <style>
+      canvas{
+         border: 1px dotted black;
+      }
+   </style>
+   <body>
+      <script>
+      /*
+      To add:
+      TODO
+         Sizing of canvas depending on image
+         JSON point serialization
+
+      Optimize algorithm speed:
+         -Dynamically changing mutation Parameters
+         -Better mutation algorithms
+         -Better triangle Initialization (allow for better traversal of error space)
+
+      Next algorithm: Have all traits be able to be passed through genes,
+      allows for better top-down control of algorithm behavior.
+      Also use a fuckton of args in functions.
+
+      */
+         var imageSrc = './ohouse.jpg';
+         //runtime variables
+         var count = 0; //used for drawing members
+         var generation_count = 0;
+         var mutRate = .8;
+         var addRate = .99; //add rate not directly added to object yet, buried deep in mutate code
+         var _running = true; //just a flag, don't touch
+         var max_tris = 250;
+         var breakout = false; //add variation to break out of local mins (which might not be important to this particular problem)
+
+
+         //yet to be initalized objects
+         var target;
+         var rawTarget;
+         var climber;
+         var imageHeight;
+         var imageWidth;
+         var imageObj;
+         var extract_genes = [];
+
+         //canvas code
+         var canvas = document.createElement('canvas');
+         canvas.id = 'canvas1';
+         canvas.height = 300;
+         canvas.width = 300;
+         imageHeight = canvas.height;
+         imageWidth = canvas.width;
+         document.body.appendChild(canvas);
+         var context = canvas.getContext('2d');
+         //Used for the shape extraction
+         var dragging = false;
+         var rectX1 = 0;
+         var rectY1 = 0;
+         var rectX2 = 0;
+         var rectY2 = 0;
+
+         var orig_x;
+         var orig_y; //this will break when i start adding new images.
+         function createImage(context){ //loads image and initializes population
+            imageObj = new Image();
+            imageObj.src = imageSrc;
+            imageObj.onload = function(){
+               canvas.width = imageObj.width;
+               canvas.height = imageObj.height;
+               orig_x = imageObj.width;
+               orig_y = imageObj.height;
+               context.drawImage(imageObj, 0, 0, imageObj.width, imageObj.height);
+               loaded = true;
+               rawTarget = context.getImageData(0,0, canvas.width, canvas.height);
+               target = rawTarget.data;
+               climber = init_climber(target, canvas, max_tris, mutRate, addRate, breakout); //population initialized with image info
+               /*
+               document.addEventListener('mousedown', function(evt){
+                  dragging = true;
+                  var point = calculateOffset(evt.clientX, evt.clientY);
+                  rectX1 = point.x;
+                  rectY1 = point.y;
+                  rectX2 = point.x;
+                  rectY2 = point.y;
+               });
+               document.addEventListener('mousemove', function(evt){
+                  if (dragging){
+                     var point = calculateOffset(evt.clientX, evt.clientY);
+                     rectX2 = point.x;
+                     rectY2 = point.y;
+                  }
+               })
+               document.addEventListener('mouseup', function(evt){
+                  dragging = false;
+                  extract_genes = extract(climber.members[0], [rectX1, rectY1, rectX2, rectY2], context);
+                  //this extraction only works if the rectangle is drawn down right
+               });
+               */
+               document.addEventListener('keydown', function(evt){
+                  if (evt.keyCode === 32){ //space
+                     count = 0; //reset count for drawing
+                     run(climber);
+                     climber.clear();
+                     climber.members[1].render();
+                  }
+                  else if (evt.keyCode === 68){ //d
+                     context.globalAlpha = 0;
+                     context.putImageData(rawTarget, 0,0);
+                  }
+                  else if (evt.keyCode === 70){ //f
+                     var factor = orig_x/canvas.width;
+                     console.log(factor);
+                     //need to calculate factor
+                     rawTarget = scale(factor, canvas, climber, imageObj, context, target);
+                     console.log(JSON.stringify(climber));
+                  }
+                  else if (evt.keyCode === 71){ //f
+                     loadData(climber, canvas, target, 482, 320, one);
+                  }
+                  else if (evt.keyCode === 83){ //s
+                     if (_running){
+                        _running = false;
+                     }
+                     else _running = true;
+                     console.log(generation_count);
+                  }
+                  else if (evt.keyCode === 49){ //1
+                     var factor = 1/1.2;
+                     rawTarget = scale(factor, canvas, climber, imageObj, context, target);
+                  }
+                  else if (evt.keyCode === 50){ //2
+                     var factor = 1.2;
+                     rawTarget = scale(factor, canvas, climber, imageObj, context, target);
+                  }
+               }); //event listeners
+               function wrap(){
+                  if (_running){
+                     run(climber); //climber code
+                     //rectangle
+                  }
+                  if (dragging){
+                     climber.clear();
+                     climber.members[1].render();
+                     drawRectangle(context, rectX1, rectY1, rectX2, rectY2);
+                  }
+               }
+               window.setInterval(wrap, 10);
+            };
+         }
+         createImage(context);
+      </script>
+      <p>
+         Genetic algorithm: evolves triangles to match a target image. Like all genetic algorithms takes a long, long time to converge. 
+         <ul>
+            <li>To see what you're working with: press s to pause, then d to show the image </li>
+            <li>s to pause/play</li>
+            <li>d to draw target</li>
+            <li>f to savedata. (Logs to console). No good way to save stuff yet. </li>
+            <li>g to load an example, run over six hours</li>
+            <li>Space to run a generation</li>
+            <li>press '1' to scale by 1.2 </li>
+            <li>press '2' to scale by 1/1.2 </li>
+         </ul>
+      </p>
+   </body>
+</html>
